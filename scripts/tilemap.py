@@ -24,7 +24,7 @@ class Tilemap:
         self.tilemap = {}
         self.offgrid_tiles = []
 
-        for i in range(14):
+        for i in range(10):
             # syntax for creating a horizontal line
             self.tilemap[str(3 + i) + ";10"] = {
                 "type": "grass",
