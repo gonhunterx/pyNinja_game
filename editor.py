@@ -72,7 +72,8 @@ class Editor:
                 tile_loc = str(tile_pos[0]) + ';' + str(tile_pos[1])
                 if tile_loc in self.tilemap.tilemap:
                     del self.tilemap.tilemap[tile_loc]
-            
+                for tile in self.tilemap.offgrid_tiles.copy():
+                    pass
             
             self.display.blit(current_tile_img, (5, 5))
             
