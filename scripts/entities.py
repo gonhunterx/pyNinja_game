@@ -1,4 +1,7 @@
 import pygame
+import math 
+import random
+from scripts.particle import Particle
 
 class PhysicsEntity:
     def __init__(self, game, e_type, pos, size):
@@ -71,6 +74,58 @@ class PhysicsEntity:
     def render(self, surf, offset=(0, 0)):
         surf.blit(pygame.transform.flip(self.animation.img(), self.flip, False), (self.pos[0] - offset[0] + self.anim_offset[0], self.pos[1] - offset[1] + self.anim_offset[1]))
 
+class Enemy(PhysicsEntity):
+    def __init__(self, game, pos, size):
+        super().__init__(game, 'enemy', pos, size)
+        
+        self.walking = 0 
+        
+    def update(self, tilemap, movement=(0, 0)):
+        # calcs for what to do 
+        if self.walking:
+            if tilemap.solid_check((self.rect().centerx + (-7 if self.flip else 7), self.pos[1] + 23)):
+                # run into something right or left flip 
+                if (self.collisions['right'] or self.collisions['left']):
+                    self.flip = not self.flip
+                else:
+                    movement = (movement[0] - 0.5 if self.flip else 0.5, movement[1])
+            else:
+                self.flip = not self.flip
+            # cut down to 0 over time 
+            self.walking = max(0, self.walking - 1)
+            # get one frame to shoot here
+            if not self.walking:
+                # diff between enemy and player 
+                dis = (self.game.player.pos[0] - self.pos[0], self.game.player.pos[1] - self.pos[1])
+                # if y axis offset is less than 16 pixels 
+                if (abs(dis[1]) < 16):
+                    if (self.flip and dis[0] < 0):
+                        # spawn bullet to left 
+                        self.game.projectiles.append([[self.rect().centerx - 7, self.rect().centery], -1.5, 0])
+                    if (not self.flip and dis[0] > 0):
+                        self.game.projectiles.append([[self.rect().centerx + 7, self.rect().centery], 1.5, 0])
+                    
+                
+        # check
+        elif random.random() < 0.01:
+            self.walking = random.randint(30, 120)
+        
+        super().update(tilemap, movement=movement)
+        
+        if movement[0] != 0:
+            self.set_action('run')
+        else:
+            self.set_action('idle')   
+            
+    def render(self, surf, offset=(0, 0)):
+        super().render(surf, offset=offset)
+        if self.flip:
+            # also flip gun and offset it with the '- 4' and account for the width of gun img 
+            surf.blit(pygame.transform.flip(self.game.assets['gun'], True, False), (self.rect().centerx - 4 - self.game.assets['gun'].get_width() - offset[0], self.rect().centery - offset[1]))
+        else:
+            # center with 4 pixel offset and camera 
+            surf.blit(self.game.assets['gun'], (self.rect().centerx + 4 - offset[0], self.rect().centery - offset[1]))
+
 class Player(PhysicsEntity):
     def __init__(self, game, pos, size):
         super().__init__(game, 'player', pos, size)
@@ -109,21 +164,45 @@ class Player(PhysicsEntity):
             else:
                 self.set_action('idle')
                 
+                # if at start or end of dash
+        if abs(self.dashing) in {60, 50}:
+            for i in range(20):
+                # selecting a random angle within a full circle (full circle = math.pi * 2)
+                # getting the radian
+                angle = random.random() * math.pi * 2
+                speed = random.random() * 0.5 + 0.5
+                # cos for x axis sin for y axis 
+
+                # generating a velocity based on the angle (how to move something in a direction 2D)
+                # by it not being random you maintain distribution and scaling 
+                pvelocity = [math.cos(angle) * speed, math.sin(angle) * speed]
+                
+                self.game.particles.append(Particle(self.game, 'particle', self.rect().center, velocity=pvelocity, frame=random.randint(0, 7)))
+                
         if self.dashing > 0:
             self.dashing = max(0, self.dashing - 1)
         if self.dashing < 0:
             self.dashing = min(0, self.dashing + 1)
+        # this below runs while in a dash
         if abs(self.dashing) > 50:
             self.velocity[0] = abs(self.dashing) / self.dashing * 8
             if abs(self.dashing) == 51:
                 self.velocity[0] *= 0.1
+            pvelocity = [abs(self.dashing) / self.dashing * random.random() * 3, 0]
+            self.game.particles.append(Particle(self.game, 'particle', self.rect().center, velocity=pvelocity, frame=random.randint(0, 7)))
+
         
         if self.velocity[0] > 0:
-            self.velocity[0] = min(self.velocity[0] - 0.1, 0)
+            self.velocity[0] = max(self.velocity[0] - 0.1, 0)
         else:
             self.velocity[0] = min(self.velocity[0] + 0.1, 0)
             
-            
+    def render(self, surf, offset=(0, 0)):
+        if abs(self.dashing) <= 50:
+            # get rendering func of the super class 
+            # make player invisible
+            super().render(surf, offset=offset)
+    
     def jump(self):
         if self.wall_slide:
             # facing left and movement is to the left 
