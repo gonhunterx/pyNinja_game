@@ -50,8 +50,20 @@ class Game:
         self.player = Player(self, (50, 50), (8, 15))
         
         self.tilemap = Tilemap(self, tile_size=16)
-        self.tilemap.load('map.json')
+        # SET LEVEL
+        self.load_level(0)
         
+        
+
+        # groups of disposable objects 
+        self.projectiles = []
+        self.particles = []
+        self.sparks = []
+        
+        self.scroll = [0, 0]
+        
+    def load_level(self, map_id):
+        self.tilemap.load('data/maps/' + str(map_id) + '.json')
         self.leaf_spawners = []
         
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
@@ -65,14 +77,6 @@ class Game:
             else:
                 # set in spawner pos and size 
                 self.enemies.append(Enemy(self, spawner['pos'], (8, 15)))
-
-        self.projectiles = []
-        self.particles = []
-        
-        self.scroll = [0, 0]
-        
-    def load_level(self, map_id):
-        self.tilemap.load('data/maps/' + str(map_id) + '.json')
         
     def run(self):
         while True:
@@ -117,8 +121,14 @@ class Game:
                 elif abs(self.player.dashing) < 50:
                     if self.player.rect().collidepoint(projectile[0]):
                         self.projectiles.remove(projectile)
-                    
-                            
+            
+            # MANAGE SPARKS     
+            for spark in self.sparks.copy():
+                kill = spark.update()
+                spark.render(self.display, offset=render_scroll)
+                if self.kill:
+                    self.sparks.remove(spark)
+                 
             # MANAGE PARTICLES
             for particle in self.particles.copy():
                 kill = particle.update()

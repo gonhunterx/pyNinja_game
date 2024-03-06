@@ -2,6 +2,7 @@ import pygame
 import math 
 import random
 from scripts.particle import Particle
+from scripts.spark import Spark
 
 class PhysicsEntity:
     def __init__(self, game, e_type, pos, size):
@@ -102,6 +103,8 @@ class Enemy(PhysicsEntity):
                     if (self.flip and dis[0] < 0):
                         # spawn bullet to left 
                         self.game.projectiles.append([[self.rect().centerx - 7, self.rect().centery], -1.5, 0])
+                        for i in range(4):
+                            self.sparks.append(Spark(self.projectiles[-1][0], random.random() - 0.5 + math.pi, 2 + random.random()))
                     if (not self.flip and dis[0] > 0):
                         self.game.projectiles.append([[self.rect().centerx + 7, self.rect().centery], 1.5, 0])
                     
